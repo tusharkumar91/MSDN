@@ -64,6 +64,8 @@ parser.add_argument('--optimizer', type=int, default=0, help='which optimizer us
 
 
 parser.add_argument('--evaluate', action='store_true', help='Only use the testing mode')
+parser.add_argument('--predict', action='store_true', help='Predict on sample image')
+parser.add_argument('--image_path', type=str, default = '')
 args = parser.parse_args()
 # Overall loss logger
 overall_train_loss = network.AverageMeter()
@@ -178,7 +180,18 @@ def main():
     top_Ns = [50, 100]
     best_recall = np.zeros(len(top_Ns))
 
-
+    if args.predict:
+        print("Predicting.....")
+        net.eval()
+        im, im_info = test_set.get_image_info(image_path=args.image_path)
+        result = net.predict(im.unsqueeze(0), [im_info], top_Ns=[50])
+        print(result)
+        for relationship in result['relationships']:
+            print("Subject : {} | Rel : {} | Object : {}".format(train_set._object_classes[relationship[0]],
+                                                                 train_set._predicate_classes[relationship[2]],
+                                                                 train_set._object_classes[relationship[1]]))
+        return 
+    
     if args.evaluate:
         recall = test(test_loader, net, top_Ns)
         print('======= Testing Result =======') 
@@ -368,7 +381,7 @@ def test(test_loader, net, top_Ns):
         rel_cnt_correct += rel_cnt_correct_t
         batch_time.update(time.time() - end)
         end = time.time()
-        if (i + 1) % 500 == 0 and i > 0:
+        if (i + 1) % 5 == 0 and i > 0:
             for idx, top_N in enumerate(top_Ns):
                 print '[%d/%d][Evaluation] Top-%d Recall: %2.3f%%' % (
                     i+1, len(test_loader), top_N, rel_cnt_correct[idx] / float(rel_cnt) * 100)

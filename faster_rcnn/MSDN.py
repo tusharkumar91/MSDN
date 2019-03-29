@@ -598,7 +598,6 @@ class Hierarchical_Descriptive_Model(HDN_base):
             gt_boxes_regions = gt_regions[:, :4] * im_info[2]
         else:
             gt_boxes_regions = None
-        
         object_result, predicate_result, region_result = \
             self(im_data, im_info, gt_boxes_object, gt_regions=gt_boxes_regions, graph_generation=True)
 
@@ -622,6 +621,27 @@ class Hierarchical_Descriptive_Model(HDN_base):
 
 
 
+    def predict(self, im_data, im_info, gt_objects=None, gt_relationships=None, gt_regions=None,
+                thr=0.5, nms=False, top_Ns=[100], use_gt_boxes=False, use_gt_regions=False, only_predicate=False):
+        print(im_data.shape)
+        print(len(im_info))
+        object_result, predicate_result, region_result = self(im_data, im_info, None, gt_regions=None, graph_generation=True)
+        cls_prob_object, bbox_object, object_rois = object_result[:3]
+        cls_prob_predicate, mat_phrase = predicate_result[:2]
+        obj_boxes, obj_scores, obj_inds, subject_inds, object_inds, \
+            subject_boxes, object_boxes, predicate_inds = \
+                self.interpret_HDN(cls_prob_object, bbox_object, object_rois,
+                                   cls_prob_predicate, mat_phrase, im_info,
+                                   nms=nms, top_N=max(top_Ns), use_gt_boxes=use_gt_boxes)
+        result = {'objects': {
+            'bbox': obj_boxes,
+            'scores': obj_scores,
+            'class': obj_inds,},
+                  'relationships': zip(subject_inds, object_inds, predicate_inds),
+                  }
+        return result
+                                                                             
+    
     def build_loss_objectiveness(self, region_objectiveness, targets):
         loss_objectiveness = F.cross_entropy(region_objectiveness, targets)
         maxv, predict = region_objectiveness.data.max(1)

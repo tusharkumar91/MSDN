@@ -80,6 +80,17 @@ class visual_genome(data.Dataset):
                 normalize,
             ])
 
+
+    def get_image_info(self, image_path):
+        target_scale = cfg.TRAIN.SCALES[npr.randint(0, high=len(cfg.TRAIN.SCALES))]
+        img = cv2.imread(image_path)
+        img, im_scale = self._image_resize(img, target_scale, cfg.TRAIN.MAX_SIZE)
+        im_info = np.array([img.shape[0], img.shape[1], im_scale], dtype=np.float32)
+        img = Image.fromarray(img)
+        if self.transform is not None:
+            img = self.transform(img)
+        return img, im_info
+    
     def __getitem__(self, index):
         # Sample random scales to use for each image in this batch
         target_scale = cfg.TRAIN.SCALES[npr.randint(0, high=len(cfg.TRAIN.SCALES))]
